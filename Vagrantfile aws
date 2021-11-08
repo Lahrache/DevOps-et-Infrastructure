@@ -1,0 +1,54 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+require ‘vagrant-aws’
+
+Vagrant.configure("2") do |config|
+
+  # Backend (first deployment)
+  config.vm.define "BEnd", primary: true do |be|
+    be.vm.hostname = "BEnd"
+
+  config.vm.provider ‘aws’ do |aws, override|
+  aws.access_key_id = “”
+  aws.secret_access_key = “”
+  aws.keypair_name = ‘ssh-keypair-name’
+  aws.instance_type = "t2.micro”
+  aws.region = ‘us-east-1’
+  aws.ami = ‘ami-20be7540’
+  aws.security_groups = [‘default’]
+  override.ssh.username = ‘ubuntu’
+  override.ssh.private_key_path = ‘~/.ssh/ssh-keypair-file’
+  end
+
+  be.vm.provision "ansible" do |ansible|
+    ansible.verbose = "vv"
+    ansible.compatibility_mode = '2.0'
+    ansible.playbook = "BEnd.yml"
+  end         
+  end
+
+  # Frontend
+  config.vm.define "FEnd", primary: true do |be|
+    be.vm.hostname = "FEnd"
+
+  config.vm.provider ‘aws’ do |aws, override|
+  aws.access_key_id = “”
+  aws.secret_access_key = “”
+  aws.keypair_name = ‘ssh-keypair-name’
+  aws.instance_type = "t2.micro”
+  aws.region = ‘us-east-1’
+  aws.ami = ‘ami-20be7540’
+  aws.security_groups = [‘default’]
+  override.ssh.username = ‘ubuntu’
+  override.ssh.private_key_path = ‘~/.ssh/ssh-keypair-file’
+  end
+
+  be.vm.provision "ansible" do |ansible|
+    ansible.verbose = "vv"
+    ansible.compatibility_mode = '2.0'
+    ansible.playbook = "Fend.yml"
+  end         
+  end
+
+end

@@ -1,0 +1,38 @@
+upstream phpfcgi {
+    # server 127.0.0.1:9000;
+    server unix:/var/run/php/php7.3-fpm.sock; #for PHP-FPM running on UNIX socket
+}
+
+server {
+	listen 80 default_server;
+	listen [::]:80 default_server;
+
+	server_name localhost;
+
+    return 301 https://$host:8443$request_uri;
+
+}
+
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+
+    root /src/http/webapp;
+
+    server_name localhost;
+
+    ssl_certificate /etc/nginx/ssl/fend.crt;
+    ssl_certificate_key /etc/nginx/ssl/fend.key;
+
+    index index.php index.html;
+
+    location ~ \.php$ {
+     fastcgi_pass phpfcgi;
+     fastcgi_split_path_info ^(.+\.php)(/.*)$;
+     include fastcgi_params;
+     fastcgi_param  SCRIPT_FILENAME $document_root$fastcgi_script_name;
+     #fastcgi_param  HTTPS off;
+     fastcgi_read_timeout 1200;
+ }
+
+}

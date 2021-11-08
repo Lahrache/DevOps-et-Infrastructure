@@ -1,0 +1,93 @@
+---
+- name: Frontend Configuration
+  hosts: FEnd
+  gather_facts: false
+  become: yes
+  
+  tasks:
+
+    - name: install packages
+      apt: name={{ item }} update_cache=yes state=latest
+      with_items:
+        - nginx
+        - openssl
+        - python3-cryptography
+        - mariadb-server
+        - php
+        - php-fpm
+        - php-mysql
+        - php-pdo
+        - net-tools
+
+    
+    - name: Disable apache2 service
+      ansible.builtin.systemd:
+        name: apache2
+        enabled: no
+        state: stopped
+
+ 
+    - name: Create '/etc/nginx/ssl' directory
+      file:
+        path: /etc/nginx/ssl
+        state: directory
+        mode: '0755'
+
+    - name: Generate an OpenSSL private key
+      openssl_privatekey:
+        path: /etc/nginx/ssl/fend.key
+ 
+
+    - name: Generate an OpenSSL Certificate Signing Request
+      openssl_csr:
+        path: /etc/nginx/ssl/fend.csr
+        privatekey_path: /etc/nginx/ssl/fend.key
+        country_name: MA
+        organization_name: OpsVox
+        email_address: lah.red.lr@gmail.com
+        common_name: fend
+ 
+    - name: Generate a self signed certificate
+      openssl_certificate:
+        path: /etc/nginx/ssl/fend.crt
+        privatekey_path: /etc/nginx/ssl/fend.key
+        csr_path: /etc/nginx/ssl/fend.csr
+        provider: selfsigned
+   
+
+    - name: Give writable mode to http folder
+      file:
+        path: /src/http
+        state: directory
+        mode: '0755'
+
+    - name: Create nginx configuration file
+      template: src=default dest=/etc/nginx/sites-available/default
+    
+
+    - name: Copy web application
+      copy:
+        src: webapp
+        dest: /src/http
+        owner: www-data
+        group: www-data    
+
+    - name: Restart php-fpm
+      systemd:
+        name: php7.3-fpm
+        state: restarted
+
+
+# TODO:
+# - install php-fpm
+# - setup php(fpm
+# - restart php-fpm
+# - setup nginx to use your app in /src/http/index.html
+# - test your website on your host with : http://localhost:8080
+# - your nginx server must force the usage of https (302 redirection)
+# - your application must install database schemes (check if exist and if install if it not exist) or it won't work.
+
+    - name: Restart nginx
+      systemd:
+        name: nginx
+        state: restarted

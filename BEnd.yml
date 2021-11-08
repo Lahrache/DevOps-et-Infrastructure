@@ -1,0 +1,60 @@
+---
+- hosts: BEnd
+  gather_facts: false
+  become: yes
+
+  tasks:
+
+    - name: Install mariadb
+      apt:
+        name: ["mariadb-server","python3-pymysql"]
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Modify configuration file to listen on all interfaces
+      lineinfile:
+        dest: /etc/mysql/mariadb.conf.d/50-server.cnf
+        regexp: "^bind-address"
+        line: "bind-address=0.0.0.0"
+
+    
+    - name: Create a new database with name 'test2'
+      community.mysql.mysql_db:
+        name: test2
+        state: present
+        check_implicit_admin: true
+        login_unix_socket: /run/mysqld/mysqld.sock
+  
+ 
+    - name: Create database user with password and all database privileges
+      community.mysql.mysql_user:
+        name: newuser
+        password: 12345
+        priv: 'test2.*:ALL,GRANT'
+        host: "10.0.0.10"
+        state: present
+        check_implicit_admin: true
+        login_unix_socket: /run/mysqld/mysqld.sock
+
+    - name: Copy database dump file
+      copy:
+        src: dump.sql
+        dest: /tmp
+        
+
+    - name: Import database 'test2'
+      community.mysql.mysql_db:
+        name: test2
+        state: import
+        target: /tmp/dump.sql
+        login_user: newuser 
+        login_password: 12345
+        
+       
+    - name: Restart mysql service
+      systemd:
+        name: mysql
+        state: restarted
+     
+
+    
